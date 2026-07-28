@@ -1,0 +1,18 @@
+{
+  "name": "pi-quickstart",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx agent.ts",
+    "quickstart": "tsx quickstart.ts"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "latest",
+    "quickjs-emscripten": "^0.32.0",
+    "typebox": "^1.1.38"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0"
+  }
+}
