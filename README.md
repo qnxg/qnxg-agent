@@ -1,20 +1,34 @@
 # qnxg agent
 
-> 注：目前的代码是为了看效果而用 ai 快速跑出来的，可能各方面看上去都有点简陋。
-
-因为运行的是 pi sdk，所以会加载电脑上的 pi agent 的模型配置。
+易千 agent，一个实验性质的项目。可以通过封装好的工具查询 GreptimeDB ，并通过内置的 quickjs 灵活统计数据。agent 部分直接采用了 pi sdk，所以会加载电脑上的 pi agent 的模型配置。
 
 pi的配置文件主要有两个 auth.json 和 model.json，其中 auth.json 会重定向到项目内，而 model.json 目前还是加载本地的 model.json。
 
 ## 运行
 
+1. 配置 pi 的模型，[参考文档](https://pi.dev/docs/latest/models)
+2. 配置环境变量
+
 ```
-npx tsx agent.ts
+GREPTIME_USERNAME=user_name
+GREPTIME_PASSWORD=your_password_here
+GREPTIME_URL=https://your_website.com/v1/sql
+```
+
+3. 运行即可
+
+```
+npm install
+npm start
 ```
 
 ## feature
 
-提问样例：查询一下电费查询接口的情况
+目前只有在线查询和 js 工具可用，不过已经可以完成不少任务了。
+
+提问样例：
+- 查询一下电费查询接口的情况
+- 统计一下7月20日的异常记录
 
 ## TODO
 
