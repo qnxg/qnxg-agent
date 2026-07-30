@@ -8,8 +8,6 @@
  *   GREPTIME_PASSWORD - 密码
  */
 
-const DEFAULT_URL = "https://trace.qnxg.cn/v1/sql";
-
 export function getGreptimeConfig() {
   const url = process.env.GREPTIME_URL;
   const username = process.env.GREPTIME_USERNAME;

@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "tsx agent.ts",
-    "quickstart": "tsx quickstart.ts"
+    "start": "tsx agent.ts"
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "latest",
