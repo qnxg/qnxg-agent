@@ -14,7 +14,7 @@ export function getGreptimeConfig() {
   const url = process.env.GREPTIME_URL;
   const username = process.env.GREPTIME_USERNAME;
   const password = process.env.GREPTIME_PASSWORD;
-  if (!username || !password) {
+  if (!username || !password || !url) {
     throw new Error(
       "缺少 GreptimeDB 认证信息，请设置环境变量 GREPTIME_USERNAME 和 GREPTIME_PASSWORD",
     );

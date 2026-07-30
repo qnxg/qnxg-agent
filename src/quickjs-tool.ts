@@ -23,18 +23,20 @@ export const quickjsTool = defineTool({
   var data = JSON.parse(raw);
   var rows = data.output[0].records.rows;
   // 分析 rows ...
-  JSON.stringify(results);  // 最后一行的表达式值作为返回值返回
-
-注意：代码最后一行的求值结果会作为工具返回值，请用 JSON.stringify(...) 把对象转成字符串。`,
+  JSON.stringify(results);  // 最后一行的表达式值作为返回值返回`,
   parameters: Type.Object({
     code: Type.String({ description: "要执行的 JavaScript 代码" }),
   }),
   execute: async (_toolCallId, params) => {
-    const { result, logs } = await runQuickJS(params.code);
+    const { result, error, logs } = await runQuickJS(params.code);
+    // const output = [
+    //   ...(logs.length > 0 ? ["[logs]", ...logs, "[result]"] : []),
+    //   error ?? result,
+    // ].join("\n");
     const output = [
-      ...(logs.length > 0 ? ["[logs]", ...logs, "[result]"] : []),
-      result,
+      ...logs, error ?? result
     ].join("\n");
+
     return {
       content: [{ type: "text", text: output }],
       details: {},

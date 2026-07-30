@@ -9,7 +9,7 @@ pi的配置文件主要有两个 auth.json 和 model.json，其中 auth.json 会
 ## 运行
 
 ```
-npx tsx agent.tsx
+npx tsx agent.ts
 ```
 
 ## feature
