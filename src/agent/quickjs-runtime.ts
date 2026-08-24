@@ -9,7 +9,7 @@
  */
 
 import { newAsyncContext } from "quickjs-emscripten";
-import { greptimeQuery } from "./greptime-query.js";
+import { greptimeQuery } from "../greptime-query.js";
 
 export interface QuickJSRunResult {
   /** 代码 eval 的返回值（字符串），出错时为 undefined */

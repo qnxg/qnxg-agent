@@ -38,7 +38,3 @@ npm start          # 实际执行 tsx agent.ts
 ## QuickJS 沙箱约定（改 prompt 或工具时遵守）
 
 沙箱内可用全局：`query(sql)` 返回 JSON 字符串；`log(...args)` 收集调试输出。返回结构为 `{ output: [{ records: { schema, rows } }] }`。
-
-## 领域知识（`src/prompt/prompt.md`）
-
-`src/prompt/prompt.md` **未被 git 跟踪**，通过 `systemPromptOverride` 注入到 agent 的 system prompt 中。含反复试错得来的 GreptimeDB 查询经验和业务领域知识，改提示词前务必先读。
