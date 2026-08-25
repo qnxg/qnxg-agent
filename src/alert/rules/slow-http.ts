@@ -25,6 +25,7 @@ export const slowHttpRule: AlertRule = {
   name: "HTTP 接口慢请求告警",
   description: "接口平均耗时超过其配置的阈值",
   groupBy: ["http.route"],
+  interval: 2,
 
   async evaluate(): Promise<Signal[]> {
     const WINDOW_MIN = 10; // 时间窗口（分钟）
@@ -55,6 +56,7 @@ export const slowHttpRule: AlertRule = {
           value: avgMs,
           message: `接口 ${route} 平均耗时 ${avgMs.toFixed(0)}ms（阈值 ${threshold}ms）`,
           timestamp: now,
+          interval: this.interval,
         };
       });
   },

@@ -12,17 +12,17 @@ try {
   // 没有 .env，依赖外部环境变量
 }
 
-import { rules } from "./src/alert/rules/index.js";
+import { rulesManager } from "./src/alert/rules/index.js";
 import { runDetection } from "./src/alert/detector.js";
 import { AlertStateMachine } from "./src/alert/state-machine.js";
 import { processSignals } from "./src/alert/processor.js";
 
 const stateMachine = new AlertStateMachine();
 
-console.log(`告警系统启动，加载规则 ${rules.length} 条`);
+console.log(`告警系统启动，加载规则 ${rulesManager.length} 条`);
 
 for (let i = 0; i < 3; i++) {
-  const signals = await runDetection(rules);
+  const signals = await runDetection(rulesManager);
   const firingSignals = stateMachine.update(signals);
   const groups = processSignals(firingSignals);
   const stats = stateMachine.getStats();

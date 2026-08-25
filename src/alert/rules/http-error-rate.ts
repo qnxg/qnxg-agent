@@ -12,6 +12,7 @@ export const httpErrorRateRule: AlertRule = {
   name: "HTTP 接口错误率告警",
   description: "最近窗口内各接口错误率超阈值",
   groupBy: ["http.route"],
+  interval: 1,
 
   async evaluate(): Promise<Signal[]> {
     const WINDOW_MIN = 10; // 时间窗口（分钟）
@@ -37,6 +38,7 @@ export const httpErrorRateRule: AlertRule = {
         value: Number(r.err_rate),
         message: `接口 ${r["http.route"]} 错误率 ${Number(r.err_rate).toFixed(1)}%`,
         timestamp: now,
+        interval: this.interval
       }));
   },
 };

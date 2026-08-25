@@ -19,6 +19,9 @@ export interface Signal {
   message: string;
   /** 触发时间(ms) */
   timestamp: number;
+  /** 检测的执行间隔，(或许是以分钟为单位，具体看loop.ts实现)**/
+  interval: number,
+
 }
 
 /**
@@ -33,6 +36,8 @@ export interface AlertRule {
   description?: string;
   /** 分组维度元数据，给人看/WebUI 展示用，如 ["http.route"] */
   groupBy?: string[];
+  /** 检测的执行间隔，(或许是以分钟为单位，具体看loop.ts实现)**/
+  interval: number,
   /** 执行检测，返回零到多个信号（空数组表示当前未触发） */
   evaluate(): Promise<Signal[]>;
 }

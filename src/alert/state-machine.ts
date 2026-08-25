@@ -28,6 +28,8 @@ export interface AlertInstance {
   consecutiveMisses: number;
   /** 最近触发信号 */
   lastSignal: Signal;
+  /** 检测的执行间隔 */
+  interval: number,
 }
 
 /** pending -> firing 需要的连续触发轮数 */
@@ -46,13 +48,20 @@ export class AlertStateMachine {
   /**
    * 每轮更新状态。
    * @param signals 本轮检测产出的信号
+   * @param timestamp 当前时间戳，用于判定是否该运行告警信号
    * @returns 当前 firing 实例的最新信号列表（给下游抑制/分组/推送用）
    */
-  update(signals: Signal[]): Signal[] {
+  update(signals: Signal[], activeRulesID: string[]): Signal[] {
     const hitKeys = new Set<string>();
+    const rulesIdSet = new Set<string>(activeRulesID);
 
     // 处理本轮命中的信号
     for (const s of signals) {
+      // 跳过未规则的信号，只处理本轮激活的规则
+      // 防止规则在未被激活的轮次被调整状态
+      if (!rulesIdSet.has(s.ruleId)) {
+        continue;
+      }
       const k = this.key(s.ruleId, s.groupKey);
       hitKeys.add(k);
 
@@ -66,6 +75,7 @@ export class AlertStateMachine {
           consecutiveHits: 1,
           consecutiveMisses: 0,
           lastSignal: s,
+          interval: s.interval,
         };
         if (newInst.consecutiveHits >= FIRE_AFTER_HITS) {
           newInst.status = "firing";
@@ -96,7 +106,8 @@ export class AlertStateMachine {
       ) {
         this.instances.delete(k); // resolved
       } else if (inst.status === "pending") {
-        this.instances.delete(k); // pending 抖动清理
+        // 一次就从pending转为正常？感觉这里可能会有坑
+        this.instances.delete(k); // 清理不再告警的信号
       }
     }
 
