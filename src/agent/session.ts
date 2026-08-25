@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import {
   createAgentSession,
   DefaultResourceLoader,
+  defineTool,
   getAgentDir,
   ModelRuntime,
   SessionManager,
@@ -39,7 +40,9 @@ export function formatToolIO(value: unknown): string {
   }
 }
 
-export async function createAgent(): Promise<AgentSession> {
+export async function createAgent(
+  extraTools: ReturnType<typeof defineTool>[] = [],
+): Promise<AgentSession> {
   const modelRuntime = await ModelRuntime.create({
     authPath: "auth.json",
   });
@@ -60,8 +63,8 @@ export async function createAgent(): Promise<AgentSession> {
     modelRuntime,
     resourceLoader: loader,
     noTools: "all",
-    customTools: [quickjsTool],
-    tools: ["quickjs_exec"],
+    customTools: [quickjsTool, ...extraTools],
+    tools: ["quickjs_exec", ...extraTools.map((t) => t.name)],
   });
 
 

@@ -29,7 +29,9 @@ export interface AlertInstance {
   /** 最近触发信号 */
   lastSignal: Signal;
   /** 检测的执行间隔 */
-  interval: number,
+  interval: number;
+  /** agent 分析后打的简短注释（根因摘要，供运维一眼看明白） */
+  annotation?: string;
 }
 
 /** pending -> firing 需要的连续触发轮数 */
@@ -130,5 +132,22 @@ export class AlertStateMachine {
       else if (inst.status === "firing") firing++;
     }
     return { pending, firing };
+  }
+
+  /** agent 给某个告警实例打注释（根因摘要） */
+  annotate(ruleId: string, groupKey: string, comment: string): boolean {
+    const inst = this.instances.get(this.key(ruleId, groupKey));
+    if (!inst) return false;
+    inst.annotation = comment;
+    return true;
+  }
+
+  /** 返回当前 firing 的实例列表（含 annotation），供输出/推送用 */
+  getFiringInstances(): AlertInstance[] {
+    const result: AlertInstance[] = [];
+    for (const inst of this.instances.values()) {
+      if (inst.status === "firing") result.push(inst);
+    }
+    return result;
   }
 }
