@@ -9,9 +9,9 @@ import {
   createAgentSession,
   DefaultResourceLoader,
   defineTool,
-  getAgentDir,
   ModelRuntime,
   SessionManager,
+  SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import { quickjsTool } from "./quickjs-tool.js";
@@ -43,15 +43,21 @@ export function formatToolIO(value: unknown): string {
 export async function createAgent(
   extraTools: ReturnType<typeof defineTool>[] = [],
 ): Promise<AgentSession> {
+  // 模型配置全部来自项目内 pi-config/ 目录，不依赖 ~/.pi/agent
+  // - models.json: deepseek provider + 模型定义，apiKey 通过 $DEEPSEEK_API_KEY 引用 .env
+  // - settings.json: 默认模型 deepseek-v4-flash
+  // - auth.json: 凭据占位（当前 key 走 .env 环境变量插值）
   const modelRuntime = await ModelRuntime.create({
-    authPath: "auth.json",
+    authPath: "pi-config/auth.json",
+    modelsPath: "pi-config/models.json",
   });
+  const settingsManager = SettingsManager.create(process.cwd(), "pi-config");
 
   const promptMd = readFileSync("src/agent/prompt/prompt.md", "utf-8");
 
   const loader = new DefaultResourceLoader({
     cwd: process.cwd(),
-    agentDir: getAgentDir(),
+    agentDir: "pi-config",
     noExtensions: true,
     systemPromptOverride: () =>
       `你是微生活 agent，负责查询和分析微湖大（weihuda）校园服务后端的观测数据。\n\n${promptMd}`,
@@ -61,6 +67,7 @@ export async function createAgent(
   const { session } = await createAgentSession({
     sessionManager: SessionManager.inMemory(),
     modelRuntime,
+    settingsManager,
     resourceLoader: loader,
     noTools: "all",
     customTools: [quickjsTool, ...extraTools],

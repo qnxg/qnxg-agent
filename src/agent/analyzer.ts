@@ -50,7 +50,7 @@ ${alertLines}
 
 每个告警分析完后，调用 annotate_alert 工具给它打注释：
 - 参数 ruleId / groupKey 从上面的告警列表取。
-- comment 写一句话根因摘要，**尽量短，让人一眼能看明白是咋回事**。不要把分析过程塞进 comment。
+- comment 写一句话根因摘要，**尽量短，让人一眼能看明白情况**。不要把分析过程塞进 comment。
 - 每个告警都要调用一次 annotate_alert。`;
 }
 
