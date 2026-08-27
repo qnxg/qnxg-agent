@@ -24,17 +24,17 @@ DEEPSEEK_API_KEY=your_deepseek_api_key
 
 安装依赖
 ```
-npm install
+pnpm install
 ```
 
 模式一：以 agent 模式运行，交互式分析 greptime 数据库
 ```
-npm run agent
+pnpm run agent
 ```
 
 模式二：以告警模式运行，循环检测并生成告警信号，调用 agent 分析原因。
 ```
-npm run loop
+pnpm run loop
 ```
 
 3. 可选配置
