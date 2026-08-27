@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "tsx agent.ts",
-    "alert": "tsx alert.ts",
+    "agent": "tsx agent.ts",
     "loop": "tsx src/loop.ts"
   },
   "dependencies": {
