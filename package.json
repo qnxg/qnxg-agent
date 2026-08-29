@@ -7,16 +7,22 @@
   "scripts": {
     "agent": "tsx agent.ts",
     "loop": "tsx src/loop.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "web": "tsx src/server/index.ts",
+    "web:build": "pnpm --dir webui build",
+    "web:dev": "concurrently -k \"tsx watch src/server/index.ts\" \"pnpm --dir webui dev\""
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "latest",
+    "@hono/node-server": "^2.1.1",
+    "hono": "^4.13.5",
     "quickjs-emscripten": "^0.32.0",
     "typebox": "^1.1.38"
   },
   "devDependencies": {
+    "@types/node": "^26.4.0",
+    "concurrently": "^10.0.5",
     "tsx": "^4.0.0",
-    "typescript": "^7.0.2",
-    "@types/node": "^26.4.0"
+    "typescript": "^7.0.2"
   }
 }

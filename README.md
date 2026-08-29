@@ -37,13 +37,27 @@ pnpm run agent
 pnpm run loop
 ```
 
+模式三：Web UI（agent 对话界面，shadcn/ui）
+
+```
+# 首次使用先装前端依赖
+pnpm --dir webui install
+
+# 开发模式（前后端热更新，前端 http://localhost:5173）
+pnpm web:dev
+
+# 生产模式（构建前端后由后端统一 serve，http://localhost:3210）
+pnpm web:build
+pnpm web
+```
+
 3. 可选配置
 
 src/alert/rules 目录下为告警规则集，可以将自定义告警规则加入其中。
 
 ## TODO
 
-- [ ] webui
+- [x] webui（agent 对话页已完成；告警面板待做）
 - [ ] 接入 qq 机器人
 - [ ] 补充更多提示词，它现在连有哪些接口都不知道
 - [ ] 开放读取本地代码的工具权限（现在把所有内置工具全都禁用了），可以直接在后端与爬虫代码里追踪问题
