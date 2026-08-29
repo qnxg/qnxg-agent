@@ -6,13 +6,13 @@
 
 // 加载 .env（Node 20.12+ 原生支持，文件不存在则跳过）
 try {
-  process.loadEnvFile();
+	process.loadEnvFile();
 } catch {
-  // 没有 .env，依赖外部环境变量
+	// 没有 .env，依赖外部环境变量
 }
 
-import { createAgent } from "./src/agent/session.js";
 import { startRepl } from "./src/agent/repl.js";
+import { createAgent } from "./src/agent/session.js";
 
 const session = await createAgent();
 await startRepl(session);
