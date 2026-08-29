@@ -8,9 +8,9 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 export default function MarkdownBlock({ text }: { text: string }) {
-  return (
-    <div className="prose prose-neutral dark:prose-invert max-w-none">
-      <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
-    </div>
-  );
+	return (
+		<div className="prose prose-neutral dark:prose-invert max-w-none">
+			<Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
+		</div>
+	);
 }

@@ -14,9 +14,9 @@
 
 // 加载 .env（Node 20.12+ 原生支持，文件不存在则跳过）
 try {
-  process.loadEnvFile();
+	process.loadEnvFile();
 } catch {
-  // 没有 .env，依赖外部环境变量
+	// 没有 .env，依赖外部环境变量
 }
 
 import { existsSync } from "node:fs";
@@ -24,9 +24,9 @@ import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { createAgent } from "../agent/session.js";
-import { PromptQueue } from "./prompt-queue.js";
 import { registerChatRoute } from "./chat.js";
 import { registerHistoryRoutes } from "./history.js";
+import { PromptQueue } from "./prompt-queue.js";
 
 const PORT = Number(process.env.PORT ?? 3210);
 
@@ -35,18 +35,16 @@ const queue = new PromptQueue();
 
 const app = new Hono();
 
-app.get("/api/info", (c) =>
-  c.json({ model: session.model?.id ?? "unknown" }),
-);
+app.get("/api/info", (c) => c.json({ model: session.model?.id ?? "unknown" }));
 registerChatRoute(app, session, queue);
 registerHistoryRoutes(app, session);
 
 // 生产模式：webui/dist 存在时 serve 前端构建产物 + SPA fallback
 if (existsSync("webui/dist/index.html")) {
-  app.use("/*", serveStatic({ root: "./webui/dist" }));
-  app.get("*", serveStatic({ path: "./webui/dist/index.html" }));
+	app.use("/*", serveStatic({ root: "./webui/dist" }));
+	app.get("*", serveStatic({ path: "./webui/dist/index.html" }));
 }
 
 serve({ fetch: app.fetch, port: PORT }, (info) => {
-  console.log(`Agent Web UI 已启动: http://localhost:${info.port}`);
+	console.log(`Agent Web UI 已启动: http://localhost:${info.port}`);
 });
