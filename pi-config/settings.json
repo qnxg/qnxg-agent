@@ -1,5 +1,5 @@
 {
-  "defaultProvider": "deepseek",
-  "defaultModel": "deepseek-v4-flash",
-  "defaultThinkingLevel": "off"
+	"defaultProvider": "deepseek",
+	"defaultModel": "deepseek-v4-flash",
+	"defaultThinkingLevel": "off"
 }

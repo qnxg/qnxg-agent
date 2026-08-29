@@ -18,20 +18,19 @@ import type { Signal } from "../alert/types.js";
  * "本次有哪些告警 + 要做什么 + 分析完用 annotate_alert 打注释"，不重复领域知识。
  */
 function buildPrompt(firingSignals: Signal[]): string {
-  // 告警列表：每条给 ruleId / groupKey / 现象 / 当前值
-  // ruleId 和 groupKey 是 agent 调用 annotate_alert 时定位告警实例的依据
-  const alertLines = firingSignals
-    .map((s, i) => {
-      const valueLine =
-        s.value !== undefined ? `   当前值: ${s.value}\n` : "";
-      return `${i + 1}. ruleId: ${s.ruleId}
+	// 告警列表：每条给 ruleId / groupKey / 现象 / 当前值
+	// ruleId 和 groupKey 是 agent 调用 annotate_alert 时定位告警实例的依据
+	const alertLines = firingSignals
+		.map((s, i) => {
+			const valueLine = s.value !== undefined ? `   当前值: ${s.value}\n` : "";
+			return `${i + 1}. ruleId: ${s.ruleId}
    groupKey: ${s.groupKey}
    现象: ${s.message}
 ${valueLine}`;
-    })
-    .join("\n");
+		})
+		.join("\n");
 
-  return `你是微湖大后端的告警分析助手。下面是当前正在告警（firing）的信号，请对每个告警做根因分析。
+	return `你是微湖大后端的告警分析助手。下面是当前正在告警（firing）的信号，请对每个告警做根因分析。
 
 ## 当前告警
 
@@ -62,25 +61,25 @@ ${alertLines}
  * @param firingSignals 状态机当前 firing 的信号列表
  */
 export async function analyzeAlerts(
-  session: AgentSession,
-  firingSignals: Signal[],
+	session: AgentSession,
+	firingSignals: Signal[],
 ): Promise<void> {
-  // 每次分析前清空历史，避免上次分析的上下文污染本次
-  session.agent.state.messages = [];
+	// 每次分析前清空历史，避免上次分析的上下文污染本次
+	session.agent.state.messages = [];
 
-  // 打印 agent 分析过程到 stdout；结论靠 annotate_alert 工具写入状态机
-  // const unsubscribe = session.subscribe((event) => {
-  //   if (
-  //     event.type === "message_update" &&
-  //     event.assistantMessageEvent.type === "text_delta"
-  //   ) {
-  //     // process.stdout.write(event.assistantMessageEvent.delta);
-  //   }
-  // });
+	// 打印 agent 分析过程到 stdout；结论靠 annotate_alert 工具写入状态机
+	// const unsubscribe = session.subscribe((event) => {
+	//   if (
+	//     event.type === "message_update" &&
+	//     event.assistantMessageEvent.type === "text_delta"
+	//   ) {
+	//     // process.stdout.write(event.assistantMessageEvent.delta);
+	//   }
+	// });
 
-  try {
-    await session.prompt(buildPrompt(firingSignals));
-  } finally {
-    // unsubscribe();
-  }
+	try {
+		await session.prompt(buildPrompt(firingSignals));
+	} finally {
+		// unsubscribe();
+	}
 }

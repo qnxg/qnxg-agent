@@ -7,21 +7,21 @@
 import type { AlertGroup, Signal } from "./types.js";
 
 export function processSignals(signals: Signal[]): AlertGroup[] {
-  // 1. 按 groupKey 分组
-  const groups = new Map<string, Signal[]>();
-  for (const s of signals) {
-    const arr = groups.get(s.groupKey);
-    if (arr) {
-      arr.push(s);
-    } else {
-      groups.set(s.groupKey, [s]);
-    }
-  }
+	// 1. 按 groupKey 分组
+	const groups = new Map<string, Signal[]>();
+	for (const s of signals) {
+		const arr = groups.get(s.groupKey);
+		if (arr) {
+			arr.push(s);
+		} else {
+			groups.set(s.groupKey, [s]);
+		}
+	}
 
-  // 2. 转换为 AlertGroup
-  const result: AlertGroup[] = [];
-  for (const [groupKey, sigs] of groups) {
-    result.push({ groupKey, signals: sigs });
-  }
-  return result;
+	// 2. 转换为 AlertGroup
+	const result: AlertGroup[] = [];
+	for (const [groupKey, sigs] of groups) {
+		result.push({ groupKey, signals: sigs });
+	}
+	return result;
 }
