@@ -6,7 +6,8 @@
   "packageManager": "pnpm@11.24.0",
   "scripts": {
     "agent": "tsx agent.ts",
-    "loop": "tsx src/loop.ts"
+    "loop": "tsx src/loop.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "latest",
@@ -14,6 +15,8 @@
     "typebox": "^1.1.38"
   },
   "devDependencies": {
-    "tsx": "^4.0.0"
+    "tsx": "^4.0.0",
+    "typescript": "^7.0.2",
+    "@types/node": "^26.4.0"
   }
 }
