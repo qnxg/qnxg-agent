@@ -20,7 +20,15 @@ export interface QuickJSRunResult {
 	logs: string[];
 }
 
-export async function runQuickJS(code: string): Promise<QuickJSRunResult> {
+export interface QuickJSRunOptions {
+	/** 沙箱内每次 log() 时同步回调（用于实时流式输出），参数是格式化后的单行 */
+	onLog?: (line: string) => void;
+}
+
+export async function runQuickJS(
+	code: string,
+	options: QuickJSRunOptions = {},
+): Promise<QuickJSRunResult> {
 	const vm = await newAsyncContext();
 	const logs: string[] = [];
 
@@ -40,14 +48,14 @@ export async function runQuickJS(code: string): Promise<QuickJSRunResult> {
 		// log(...args)
 		vm.newFunction("log", (...args) => {
 			// 正确打印 quickjs 对象
-			logs.push(
-				args
-					.map((h) => vm.dump(h))
-					.map((v) =>
-						typeof v === "object" && v !== null ? JSON.stringify(v) : String(v),
-					)
-					.join(" "),
-			);
+			const line = args
+				.map((h) => vm.dump(h))
+				.map((v) =>
+					typeof v === "object" && v !== null ? JSON.stringify(v) : String(v),
+				)
+				.join(" ");
+			logs.push(line);
+			options.onLog?.(line);
 		}).consume((h) => vm.setProp(vm.global, "log", h));
 
 		// filename 没啥实际意义，纯占位

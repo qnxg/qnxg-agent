@@ -5,6 +5,7 @@
  * SSE 事件来了就地更新最后一条助手消息的 blocks：
  * - text_delta: 最后一个块是 text 就追加文本，否则新开一个 text 块
  * - tool_start: 追加 running 状态的工具块
+ * - tool_update: 按 toolCallId 更新执行中的实时输出
  * - tool_end:   按 toolCallId 回填结果
  */
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -93,6 +94,16 @@ export function ChatPage() {
 								args,
 								status: "running",
 							});
+						}),
+					onToolUpdate: (toolCallId, result) =>
+						patchLastAssistant((msg) => {
+							const block = msg.blocks.find(
+								(b) => b.type === "tool" && b.toolCallId === toolCallId,
+							);
+							// 执行中的实时输出（累计文本，直接覆盖）
+							if (block?.type === "tool") {
+								block.result = result;
+							}
 						}),
 					onToolEnd: (toolCallId, result, isError) =>
 						patchLastAssistant((msg) => {

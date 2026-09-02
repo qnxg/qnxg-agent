@@ -26,6 +26,7 @@ export async function fetchInfo(): Promise<{ model: string }> {
 export interface ChatStreamHandlers {
 	onTextDelta: (delta: string) => void;
 	onToolStart: (toolCallId: string, toolName: string, args: string) => void;
+	onToolUpdate: (toolCallId: string, result: string) => void;
 	onToolEnd: (toolCallId: string, result: string, isError: boolean) => void;
 	onDone: () => void;
 	onError: (message: string) => void;
@@ -58,6 +59,9 @@ export async function streamChat(
 				break;
 			case "tool_start":
 				handlers.onToolStart(parsed.toolCallId, parsed.toolName, parsed.args);
+				break;
+			case "tool_update":
+				handlers.onToolUpdate(parsed.toolCallId, parsed.result);
 				break;
 			case "tool_end":
 				handlers.onToolEnd(parsed.toolCallId, parsed.result, parsed.isError);

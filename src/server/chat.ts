@@ -5,6 +5,7 @@
  * 响应是 SSE 流，订阅 session 事件并转发给浏览器：
  * - text_delta  模型逐字输出
  * - tool_start  工具调用开始（quickjs 的代码入参）
+ * - tool_update 工具执行中的实时输出（沙箱内 log() 的累计文本）
  * - tool_end    工具调用结束（执行结果）
  * - done        本轮结束
  * - error       出错
@@ -64,6 +65,12 @@ export function registerChatRoute(
 								toolCallId: event.toolCallId,
 								toolName: event.toolName,
 								args: formatToolIO(event.args),
+							});
+							break;
+						case "tool_execution_update":
+							void send("tool_update", {
+								toolCallId: event.toolCallId,
+								result: formatToolIO(event.partialResult),
 							});
 							break;
 						case "tool_execution_end":

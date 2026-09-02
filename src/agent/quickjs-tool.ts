@@ -27,12 +27,21 @@ export const quickjsTool = defineTool({
 	parameters: Type.Object({
 		code: Type.String({ description: "要执行的 JavaScript 代码" }),
 	}),
-	execute: async (_toolCallId, params) => {
-		const { result, error, logs } = await runQuickJS(params.code);
-		// const output = [
-		//   ...(logs.length > 0 ? ["[logs]", ...logs, "[result]"] : []),
-		//   error ?? result,
-		// ].join("\n");
+	execute: async (_toolCallId, params, _signal, onUpdate) => {
+		// 实时流式输出：沙箱里每次 log() 都把截至目前累计的 logs
+		// 作为 partial result 推给上层（webui 展开工具卡片能看到实时输出）
+		const streamedLogs: string[] = [];
+		const pushUpdate = (line: string) => {
+			streamedLogs.push(line);
+			onUpdate?.({
+				content: [{ type: "text", text: streamedLogs.join("\n") }],
+				details: {},
+			});
+		};
+
+		const { result, error, logs } = await runQuickJS(params.code, {
+			onLog: onUpdate ? pushUpdate : undefined,
+		});
 		const output = [...logs, error ?? result].join("\n");
 
 		return {
