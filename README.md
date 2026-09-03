@@ -18,7 +18,7 @@ GREPTIME_URL=https://your_website.com/v1/sql
 DEEPSEEK_API_KEY=your_deepseek_api_key
 ```
 
-默认模型为 deepseek 官方平台的 deepseek-v4-flash 模型，可以去 pi-config 文件夹内自行配置，该文件夹内是 pi agent 配置文件，[参考文档](https://pi.dev/docs/latest/models)。
+默认模型为 deepseek 官方平台的 deepseek-v4-flash 模型，可以去 backend/pi-config 文件夹内自行配置，该文件夹内是 pi agent 配置文件，[参考文档](https://pi.dev/docs/latest/models)。
 
 2. 运行
 
@@ -40,20 +40,16 @@ pnpm run loop
 模式三：Web UI（agent 对话界面，shadcn/ui）
 
 ```
-# 首次使用先装前端依赖
-pnpm --dir webui install
-
 # 开发模式（前后端热更新，前端 http://localhost:5173）
 pnpm web:dev
 
-# 生产模式（构建前端后由后端统一 serve，http://localhost:3210）
-pnpm web:build
+# 生产模式（自动构建前端后由后端统一 serve，http://localhost:3210）
 pnpm web
 ```
 
 3. 可选配置
 
-src/alert/rules 目录下为告警规则集，可以将自定义告警规则加入其中。
+backend/src/alert/rules 目录下为告警规则集，可以将自定义告警规则加入其中。
 
 ## TODO
 

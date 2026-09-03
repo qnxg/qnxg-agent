@@ -1,0 +1,26 @@
+{
+	"name": "@qnxg/backend",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"agent": "tsx agent.ts",
+		"loop": "tsx src/loop.ts",
+		"typecheck": "tsc --noEmit",
+		"web": "pnpm --filter @qnxg/webui build && tsx src/server/index.ts",
+		"web:api": "tsx watch src/server/index.ts"
+	},
+	"dependencies": {
+		"@earendil-works/pi-coding-agent": "^0.84.4",
+		"@hono/node-server": "^2.1.1",
+		"@qnxg/webui": "workspace:*",
+		"hono": "^4.13.5",
+		"quickjs-emscripten": "^0.32.0",
+		"typebox": "^1.1.38"
+	},
+	"devDependencies": {
+		"@types/node": "^26.4.0",
+		"tsx": "^4.0.0",
+		"typescript": "^7.0.2"
+	}
+}

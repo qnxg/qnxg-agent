@@ -9,17 +9,16 @@
  * - GET    /api/info     模型等元信息
  *
  * 开发时 vite proxy 把 /api 转发到这里；
- * 生产时若 web/dist 存在，直接用同一进程 serve 前端静态文件。
+ * 生产时通过 workspace 依赖定位 webui 构建产物，同一进程 serve 前端静态文件。
  */
 
-// 加载 .env（Node 20.12+ 原生支持，文件不存在则跳过）
-try {
-	process.loadEnvFile();
-} catch {
-	// 没有 .env，依赖外部环境变量
-}
+import { loadRootEnv } from "../env.js";
+
+loadRootEnv();
 
 import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
+import path from "node:path";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
@@ -33,16 +32,27 @@ const PORT = Number(process.env.PORT ?? 3210);
 const session = await createAgent();
 const queue = new PromptQueue();
 
+// 通过 workspace 依赖（@qnxg/webui）定位前端构建产物，不依赖 CWD
+const webuiDist = path.join(
+	path.dirname(
+		createRequire(import.meta.url).resolve("@qnxg/webui/package.json"),
+	),
+	"dist",
+);
+
 const app = new Hono();
 
 app.get("/api/info", (c) => c.json({ model: session.model?.id ?? "unknown" }));
 registerChatRoute(app, session, queue);
 registerHistoryRoutes(app, session);
 
-// 生产模式：webui/dist 存在时 serve 前端构建产物 + SPA fallback
-if (existsSync("webui/dist/index.html")) {
-	app.use("/*", serveStatic({ root: "./webui/dist" }));
-	app.get("*", serveStatic({ path: "./webui/dist/index.html" }));
+// 生产模式：serve 前端构建产物 + SPA fallback（dev 模式由 vite proxy 接管）
+if (existsSync(path.join(webuiDist, "index.html"))) {
+	app.use("/*", serveStatic({ root: webuiDist }));
+	app.get("*", serveStatic({ path: path.join(webuiDist, "index.html") }));
+} else {
+	console.warn(`[warn] 前端构建产物不存在：${webuiDist}，仅提供 API`);
+	console.warn("[warn] 如需完整 Web UI，请运行: pnpm web（会自动构建前端）");
 }
 
 serve({ fetch: app.fetch, port: PORT }, (info) => {
