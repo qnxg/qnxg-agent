@@ -1,26 +1,23 @@
 {
-	"name": "pi-quickstart",
+	"name": "qnxg-agent",
 	"version": "1.0.0",
 	"private": true,
 	"type": "module",
 	"packageManager": "pnpm@11.24.0",
 	"scripts": {
-		"agent": "tsx agent.ts",
-		"loop": "tsx src/loop.ts",
-		"typecheck": "tsc --noEmit",
-		"check": "biome check",
-		"check:fix": "biome check --write",
-		"fix": "pnpm typecheck && pnpm check:fix"
-	},
-	"dependencies": {
-		"@earendil-works/pi-coding-agent": "latest",
-		"quickjs-emscripten": "^0.32.0",
-		"typebox": "^1.1.38"
+		"build": "pnpm --filter @qnxg/webui build",
+		"lint": "biome check",
+		"lint:fix": "biome check --write",
+		"typecheck": "pnpm -r typecheck",
+		"check": "pnpm lint && pnpm typecheck",
+		"fix": "pnpm lint:fix && pnpm typecheck",
+		"agent": "pnpm --filter @qnxg/backend agent",
+		"loop": "pnpm --filter @qnxg/backend loop",
+		"web": "pnpm --filter @qnxg/backend web",
+		"web:dev": "concurrently -k \"pnpm --filter @qnxg/backend web:api\" \"pnpm --filter @qnxg/webui dev\""
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.11",
-		"@types/node": "^26.4.0",
-		"tsx": "^4.0.0",
-		"typescript": "^7.0.2"
+		"concurrently": "^10.0.5"
 	}
 }

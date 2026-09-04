@@ -8,12 +8,9 @@
  * isAnalyzing 标志防止上一轮 agent 分析未完成时重复触发（LLM 耗时较长）。
  */
 
-// 加载 .env（Node 20.12+ 原生支持，文件不存在则跳过）
-try {
-	process.loadEnvFile();
-} catch {
-	// 没有 .env，依赖外部环境变量
-}
+import { loadRootEnv } from "./env.js";
+
+loadRootEnv();
 
 import { analyzeAlerts } from "./agent/analyzer.js";
 import { createAnnotateTool } from "./agent/annotate-tool.js";

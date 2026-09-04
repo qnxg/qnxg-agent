@@ -1,3 +1,7 @@
+packages:
+  - "backend"
+  - "webui"
+
 allowBuilds:
   esbuild: true
   '@google/genai': false

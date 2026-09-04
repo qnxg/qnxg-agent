@@ -5,6 +5,7 @@
  * 订阅事件把模型输出和工具调用过程打到 stdout。
  */
 import { readFileSync } from "node:fs";
+import path from "node:path";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import {
 	createAgentSession,
@@ -58,7 +59,10 @@ export async function createAgent(
 	});
 	const settingsManager = SettingsManager.create(process.cwd(), "pi-config");
 
-	const promptMd = readFileSync("src/agent/prompt/prompt.md", "utf-8");
+	const promptMd = readFileSync(
+		path.join(import.meta.dirname, "prompt/prompt.md"),
+		"utf-8",
+	);
 
 	const loader = new DefaultResourceLoader({
 		cwd: process.cwd(),
