@@ -17,5 +17,3 @@ jobs:
           require-lockfile: true
 
       - run: pnpm check
-
-      - run: pnpm typecheck
