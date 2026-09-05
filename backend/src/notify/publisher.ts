@@ -9,7 +9,7 @@
  * 丢弃（demo 级实现，只打日志不做本地缓冲）。
  */
 import amqp from "amqplib";
-import { renderQueueMessage, type QueueMessage } from "./report.js";
+import { type QueueMessage, renderQueueMessage } from "./report.js";
 
 export interface PublisherOptions {
 	/** AMQP URL，如 amqp://localhost */
@@ -81,10 +81,14 @@ export class ReportPublisher {
 			);
 			return false;
 		}
-		const ok = this.channel.sendToQueue(this.opts.queue, Buffer.from(text, "utf8"), {
-			persistent: true,
-			contentType: "text/plain",
-		});
+		const ok = this.channel.sendToQueue(
+			this.opts.queue,
+			Buffer.from(text, "utf8"),
+			{
+				persistent: true,
+				contentType: "text/plain",
+			},
+		);
 		if (!ok) console.warn("[mq] channel 写缓冲已满，消息可能在排队");
 		return ok;
 	}

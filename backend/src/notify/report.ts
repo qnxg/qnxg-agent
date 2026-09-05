@@ -75,14 +75,24 @@ function formatDuration(ms: number): string {
 export function renderQueueMessage(msg: QueueMessage): string {
 	const lines: string[] = [];
 	if (msg.type === "alert_report") {
-		lines.push("⚠️ 接口告警", `接口: ${msg.route}`, `已持续: ${formatDuration(msg.durationMs)}`, "", "活跃信号:");
+		lines.push(
+			"⚠️ 接口告警",
+			`接口: ${msg.route}`,
+			`已持续: ${formatDuration(msg.durationMs)}`,
+			"",
+			"活跃信号:",
+		);
 		for (const s of msg.signals) {
 			const value = s.value !== undefined ? `（当前值 ${s.value}）` : "";
 			lines.push(`- ${s.message}${value}`);
 		}
 		if (msg.annotation) lines.push("", `根因分析: ${msg.annotation}`);
 	} else {
-		lines.push("✅ 接口已恢复", `接口: ${msg.route}`, `异常持续: ${formatDuration(msg.durationMs)}`);
+		lines.push(
+			"✅ 接口已恢复",
+			`接口: ${msg.route}`,
+			`异常持续: ${formatDuration(msg.durationMs)}`,
+		);
 		if (msg.annotation) lines.push(`根因分析: ${msg.annotation}`);
 	}
 	return lines.join("\n");

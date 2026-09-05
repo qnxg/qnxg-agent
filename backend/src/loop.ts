@@ -17,10 +17,10 @@ loadRootEnv();
 import { analyzeAlerts } from "./agent/analyzer.js";
 import { createAnnotateTool } from "./agent/annotate-tool.js";
 import { createAgent } from "./agent/session.js";
-import { AlertGate } from "./alert/gate.js";
 import { runDetection } from "./alert/detector.js";
-import { rulesManager } from "./alert/rules/index.js";
+import { AlertGate } from "./alert/gate.js";
 import { RouteRegistry } from "./alert/route-registry.js";
+import { rulesManager } from "./alert/rules/index.js";
 import { ReportPublisher } from "./notify/publisher.js";
 import { buildAlertReport, buildRecoveredMessage } from "./notify/report.js";
 
@@ -44,7 +44,10 @@ const gate = new AlertGate({
 	recoverAfterMiss: envInt("RECOVER_AFTER_MISS", 3),
 });
 const registry = new RouteRegistry();
-const publisher = new ReportPublisher({ url: RABBITMQ_URL, queue: REPORT_QUEUE });
+const publisher = new ReportPublisher({
+	url: RABBITMQ_URL,
+	queue: REPORT_QUEUE,
+});
 const annotateTool = createAnnotateTool(gate);
 const session = await createAgent([annotateTool]);
 
@@ -90,7 +93,6 @@ function requestAnalysis(): Promise<void> {
 	return runAnalysis();
 }
 
-
 // 每轮循环中的操作
 
 let tickCount = 0;
@@ -113,7 +115,9 @@ async function tick(): Promise<void> {
 
 	for (const d of decisions) {
 		if (d.type === "new-problem") {
-			console.log(`  🆕 新问题: ${d.alert.route}（${d.alert.signals.map((s) => s.ruleId).join(", ")}）`);
+			console.log(
+				`  🆕 新问题: ${d.alert.route}（${d.alert.signals.map((s) => s.ruleId).join(", ")}）`,
+			);
 			void requestAnalysis().catch((e) => console.error("[分析] 失败:", e));
 		} else if (d.type === "recovered") {
 			console.log(`  ✅ 已恢复: ${d.alert.route}`);
@@ -134,8 +138,8 @@ async function tick(): Promise<void> {
 async function tickSafe(): Promise<void> {
 	try {
 		await tick();
-  } catch (e) {
-    // TODO console.error显然没啥意义，真部署的话还得往qq告警或者打日志
+	} catch (e) {
+		// TODO console.error显然没啥意义，真部署的话还得往qq告警或者打日志
 		console.error(`[tick] 第 ${tickCount} 轮执行失败:`, e);
 	}
 }
@@ -168,7 +172,7 @@ const registryTimer = setInterval(
 
 // 低频整体检查：有活跃告警才跑（无异常不打扰）
 const analyzeTimer = setInterval(() => {
-  if (shuttingDown || isAnalyzing) return;
+	if (shuttingDown || isAnalyzing) return;
 	if (gate.getActiveAlerts().length === 0) return;
 	void requestAnalysis().catch((e) => console.error("[分析] 失败:", e));
 }, ANALYZE_INTERVAL_MS);

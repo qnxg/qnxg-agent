@@ -66,17 +66,19 @@ export class AlertGate {
 		// 1. 按照在线拉取的接口列表及逆行更新：新增接口建空条目，移除接口删条目
 		//    注册表为空时跳过（启动刷新失败的退化模式，靠信号驱动建条目）
 		if (knownRoutes.size === 0) {
-      console.log("警告：已知接口集合为空");
-      process.exit(0); // 一般来讲应该不会有这种问题，真遇到就直接杀了进程
-    }
-    for (const route of knownRoutes) { // 添加新的
-  		if (!this.entries.has(route)) {
-  			this.entries.set(route, this.newEntry(route));
-  		}
-  	}
-  	for (const route of [...this.entries.keys()]) { // 删除旧的
-  		if (!knownRoutes.has(route)) this.entries.delete(route);
-  	}
+			console.log("警告：已知接口集合为空");
+			process.exit(0); // 一般来讲应该不会有这种问题，真遇到就直接杀了进程
+		}
+		for (const route of knownRoutes) {
+			// 添加新的
+			if (!this.entries.has(route)) {
+				this.entries.set(route, this.newEntry(route));
+			}
+		}
+		for (const route of [...this.entries.keys()]) {
+			// 删除旧的
+			if (!knownRoutes.has(route)) this.entries.delete(route);
+		}
 
 		// 2. 分拣：已知接口的信号按 route 分桶；未知接口只记 route
 		const signalsByRoute = new Map<string, Signal[]>();
@@ -142,14 +144,16 @@ export class AlertGate {
 			return;
 		}
 
-
 		// 1. 未命中维度处理（只看本轮激活的规则；未激活规则的轮次完全不动计数）
 		for (const ruleId of new Set([
 			...entry.hitStreaks.keys(),
 			...entry.signals.map((s) => s.ruleId),
 		])) {
-      if (!activeRules.has(ruleId) || routeSignals.some(s => s.ruleId === ruleId))
-        continue;
+			if (
+				!activeRules.has(ruleId) ||
+				routeSignals.some((s) => s.ruleId === ruleId)
+			)
+				continue;
 			// 该规则本轮激活但未给此接口产信号
 			if (entry.signals.some((s) => s.ruleId === ruleId)) {
 				// 活跃维度：恢复去抖
@@ -232,8 +236,7 @@ export class AlertGate {
 		let active = 0;
 		for (const e of this.entries.values()) {
 			if (e.signals.length > 0) active++;
-			else if (e.hitStreaks.size > 0 || e.missStreaks.size > 0)
-				debouncing++;
+			else if (e.hitStreaks.size > 0 || e.missStreaks.size > 0) debouncing++;
 		}
 		return { debouncing, active };
 	}

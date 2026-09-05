@@ -31,7 +31,8 @@ export class RouteRegistry {
 		const added = [...next].filter((r) => !this.routes.has(r));
 		const removed = [...this.routes].filter((r) => !next.has(r));
 		this.routes = next;
-		if (added.length > 0) console.log(`[registry] 新增接口: ${added.join(", ")}`);
+		if (added.length > 0)
+			console.log(`[registry] 新增接口: ${added.join(", ")}`);
 		if (removed.length > 0)
 			console.log(`[registry] 移除接口: ${removed.join(", ")}`);
 	}

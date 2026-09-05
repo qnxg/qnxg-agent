@@ -51,10 +51,10 @@ export const slowHttpRule: AlertRule = {
 				const threshold = THRESHOLDS_MS[route] ?? DEFAULT_THRESHOLD_MS;
 				return {
 					ruleId: this.id,
-				route: route,
-				value: avgMs,
-				message: `接口 ${route} 平均耗时 ${avgMs.toFixed(0)}ms（阈值 ${threshold}ms）`,
-				timestamp: now,
+					route: route,
+					value: avgMs,
+					message: `接口 ${route} 平均耗时 ${avgMs.toFixed(0)}ms（阈值 ${threshold}ms）`,
+					timestamp: now,
 				};
 			});
 	},
