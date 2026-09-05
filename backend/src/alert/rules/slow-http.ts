@@ -10,9 +10,9 @@ import type { AlertRule, Signal } from "../types.js";
 /** 各接口耗时阈值（毫秒）。初始值参考近期 1 小时统计设定，可按需调整。 */
 const THRESHOLDS_MS: Record<string, number> = {
 	"/hdjw/grade-rank": 3000,
-	"/netflow": 1500,
+	"/netflow": 4000,
 	"/hdjw/class-table": 1000,
-	"/hdjw/exam-arrange": 800,
+	"/hdjw/exam-arrange": 1000,
 	"/pt/card-info": 800,
 	"/lab/grade": 600,
 };
@@ -24,11 +24,10 @@ export const slowHttpRule: AlertRule = {
 	id: "slow-http",
 	name: "HTTP 接口慢请求告警",
 	description: "接口平均耗时超过其配置的阈值",
-	groupBy: ["http.route"],
-	interval: 2,
+	interval: 1,
 
 	async evaluate(): Promise<Signal[]> {
-		const WINDOW_MIN = 10; // 时间窗口（分钟）
+		const WINDOW_MIN = 30; // 时间窗口（分钟）
 
 		// 用请求数加权的平均耗时，避免小流量窗口拉偏
 		const rows = await queryRows(`
@@ -52,11 +51,10 @@ export const slowHttpRule: AlertRule = {
 				const threshold = THRESHOLDS_MS[route] ?? DEFAULT_THRESHOLD_MS;
 				return {
 					ruleId: this.id,
-					groupKey: `route=${route}`,
-					value: avgMs,
-					message: `接口 ${route} 平均耗时 ${avgMs.toFixed(0)}ms（阈值 ${threshold}ms）`,
-					timestamp: now,
-					interval: this.interval,
+				route: route,
+				value: avgMs,
+				message: `接口 ${route} 平均耗时 ${avgMs.toFixed(0)}ms（阈值 ${threshold}ms）`,
+				timestamp: now,
 				};
 			});
 	},

@@ -11,12 +11,11 @@ export const httpErrorRateRule: AlertRule = {
 	id: "http-error-rate",
 	name: "HTTP 接口错误率告警",
 	description: "最近窗口内各接口错误率超阈值",
-	groupBy: ["http.route"],
 	interval: 1,
 
 	async evaluate(): Promise<Signal[]> {
-		const WINDOW_MIN = 10; // 时间窗口（分钟）
-		const THRESHOLD = 1; // 错误率阈值（%）
+		const WINDOW_MIN = 30; // 时间窗口（分钟）
+		const THRESHOLD = 20; // 错误率阈值（%）
 
 		// SQL 只负责把"各接口的错误率"算出来，阈值过滤交给 TS
 		const rows = await queryRows(`
@@ -34,11 +33,10 @@ export const httpErrorRateRule: AlertRule = {
 			.filter((r) => Number(r.err_rate) > THRESHOLD)
 			.map((r) => ({
 				ruleId: this.id,
-				groupKey: `route=${r["http.route"]}`,
+				route: String(r["http.route"]),
 				value: Number(r.err_rate),
 				message: `接口 ${r["http.route"]} 错误率 ${Number(r.err_rate).toFixed(1)}%`,
 				timestamp: now,
-				interval: this.interval,
 			}));
 	},
 };
