@@ -49,8 +49,12 @@
 - `span_attributes.busy_ns` / `span_attributes.idle_ns` — 耗时拆分
 - `span_attributes.panic` (Boolean) — 是否 panic
 - `span_attributes.redis_failed` / `span_attributes.cached` / `span_attributes.updated` — 缓存状态
+- `span_attributes.data_source` — 数据来源（cache / db / 上游拉取）
+- `span_attributes.fetch_ms` — 上游拉取耗时（毫秒）
 - `span_attributes.token_hit` / `span_attributes.tag_hit` — 令牌命中
 - 业务相关：`span_attributes.dormitory`、`span_attributes.building_id`、`span_attributes.semester_id`、`span_attributes.course_id` 等
+
+**不要猜未列出的列名**：不存在的列会直接 HTTP 400 报错。想确认某个属性是否存在，先跑一条 `SELECT * FROM opentelemetry_traces WHERE timestamp >= <最近时间> LIMIT 1` 看返回数据的列名，再写聚合查询。
 
 ### opentelemetry_traces_services（服务列表）
 
@@ -105,12 +109,24 @@
 - 时间列是 `TimestampNanosecond`（纳秒精度），构造时间范围用 `Date.UTC(...) * 1000000`。
 - **整数比较直接可用**：`WHERE timestamp >= 1785306278315196416` 有效。
 - **不要用 `::timestamp_ns` 转换**：`'1785306278315196416'::timestamp_ns` 会报 `error parsing date`。
-- 数据时间戳是 2026 年，与真实当前日期不一致。查询"今天/昨天"时，**必须先 `SELECT MAX(timestamp)` 确认数据最新时间，再推算时间窗**，否则会查到空数据。
+- 数据时间戳是 2026 年，与真实当前日期不一致。查询"今天/昨天"时，**必须先确认数据最新时间，再推算时间窗**，否则会查到空数据。
+- **确认最新时间只查 `http_request_metrics_1m`**：`SELECT MAX(time_window) FROM http_request_metrics_1m`（<1s）。traces 与 metrics 由同一采集链路写入、时间基本同步，用它的值推算 traces 的时间窗即可。**禁止对 `opentelemetry_traces` 查无时间范围的 `MAX(timestamp)`/`MIN(timestamp)`**——那是全表扫描，实测 30 秒以上。
 - 纳秒日换算：`1 天 = 86_400_000_000_000n`（86400 秒 × 10^9）。
 
 ---
 
-## 4. span_status_code 枚举值
+## 4. 查询性能红线
+
+`opentelemetry_traces` 是千万行级大表，GreptimeDB 按时间列组织数据：
+
+- **对 traces 表的每一条查询都必须带 `timestamp >=` 时间下限**（一般取告警对应的时间窗，如最近 1~2 小时）。只按 `span_attributes.*` 过滤（如 `http.route`）而不加时间范围，等于全表扫描，单条查询实测 30~60 秒。
+- 聚合也一样：`SELECT MAX(timestamp) ... WHERE route='...'` 不带时间下限同样是全表扫描，禁止。
+- 带上时间下限后，再叠加 tag 过滤（route / subsystem / status 等）就很快（<1s）。
+- `http_request_metrics_1m` 是 1 分钟预聚合表，体量小查询快，可自由使用。
+
+---
+
+## 5. span_status_code 枚举值
 
 实际数据中只有两个值：
 - `STATUS_CODE_ERROR` — 错误（~19 万条）
@@ -120,7 +136,7 @@
 
 ---
 
-## 5. span_kind 语义
+## 6. span_kind 语义
 
 | span_kind | 含义 | 数量占比 |
 |-----------|------|----------|
@@ -134,7 +150,7 @@
 
 ---
 
-## 6. 业务背景与路由分类
+## 7. 业务背景与路由分类
 
 微湖大（weihuda）校园服务后端，路由按功能模块：
 
@@ -157,7 +173,7 @@
 
 ---
 
-## 7. 查询最佳实践
+## 8. 查询最佳实践
 
 1. **先聚合后返回**：大数据量查询优先在 SQL 里 `GROUP BY` + `COUNT`/`AVG` 聚合，避免拉原始行到 JS 处理。
 2. **错误排查标准流程**：
@@ -167,6 +183,6 @@
    - 查 span_status_message 分布 → 看具体错误原因
    - 抽样查具体错误 trace 详情
 3. **发现所有 span_name**：用 `opentelemetry_traces_operations` 表，不要对全量 trace 做 `SELECT DISTINCT span_name`。
-4. **时间筛选**：始终用 `SELECT MAX(timestamp)` 获取最新时间，再推算时间窗，不要硬编码日期。
+4. **时间筛选**：先用 `SELECT MAX(time_window) FROM http_request_metrics_1m` 获取最新时间，再推算时间窗，不要硬编码日期；traces 查询的时间下限也从它推算。
 5. **耗时分析**：用 `duration_nano` 列，`AVG(duration_nano) / 1000000` 得到毫秒。
 6. **错误率**：`SUM(error_count) / SUM(req_count) * 100` 在指标表上聚合最快。
