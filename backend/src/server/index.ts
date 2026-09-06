@@ -5,6 +5,7 @@
  * 暴露 HTTP API 给前端：
  * - GET  /api/sessions               会话列表
  * - POST /api/sessions               新建会话
+ * - DELETE /api/sessions/:id         删除会话（含磁盘文件）
  * - GET  /api/sessions/:id/info      会话元信息（模型等）
  * - GET  /api/sessions/:id/history   对话历史（页面刷新恢复）
  * - POST /api/sessions/:id/chat      发消息，SSE 流式返回
@@ -51,6 +52,12 @@ app.get("/api/sessions", async (c) => c.json(await pool.list()));
 app.post("/api/sessions", async (c) => {
 	const pooled = await pool.create();
 	return c.json({ id: pooled.id });
+});
+
+app.delete("/api/sessions/:id", async (c) => {
+	const removed = await pool.remove(c.req.param("id"));
+	if (!removed) return c.json({ error: "会话不存在" }, 404);
+	return c.json({ ok: true });
 });
 
 app.get("/api/sessions/:id/info", async (c) => {

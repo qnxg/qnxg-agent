@@ -198,6 +198,37 @@ export class SessionPool {
 		if (p) p.lastActiveAt = Date.now();
 	}
 
+	/** 删除会话：池内 dispose + 删磁盘 JSONL。不存在返回 false */
+	async remove(id: string): Promise<boolean> {
+		const p = this.sessions.get(id);
+		let filePath = p?.session.sessionFile;
+
+		if (!filePath) {
+			const infos = await SessionManager.list(process.cwd(), this.sessionDir);
+			filePath = infos.find((s) => s.id === id)?.path;
+		}
+		if (!filePath) {
+			// 池内未落盘的空会话：直接从池里删掉即可
+			if (p) {
+				this.evictNow(p);
+				return true;
+			}
+			return false;
+		}
+
+		if (p) this.evictNow(p);
+		const { unlink } = await import("node:fs/promises");
+		await unlink(filePath).catch(() => {});
+		return true;
+	}
+
+	/** 立即移出池子（dispose + 清连接计时器） */
+	private evictNow(p: PooledSession): void {
+		for (const c of p.connections) clearTimeout(c.removeTimer);
+		p.session.dispose();
+		this.sessions.delete(p.id);
+	}
+
 	/** 磁盘上的会话列表 + 池内尚未落盘的（新建还没说过话的），按修改时间倒序 */
 	async list(): Promise<SessionSummary[]> {
 		const infos = await SessionManager.list(process.cwd(), this.sessionDir);
@@ -234,8 +265,7 @@ export class SessionPool {
 			if (p.connections.some((c) => c.connected)) continue;
 			if (p.session.isStreaming) continue;
 			if (now - p.lastActiveAt < EVICT_TTL_MS) continue;
-			p.session.dispose();
-			this.sessions.delete(p.id);
+			this.evictNow(p);
 		}
 	}
 }

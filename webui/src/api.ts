@@ -34,6 +34,11 @@ export async function createSession(): Promise<{ id: string }> {
 	return res.json();
 }
 
+export async function deleteSession(sessionId: string): Promise<void> {
+	const res = await fetch(`/api/sessions/${sessionId}`, { method: "DELETE" });
+	if (!res.ok) throw new Error(`删除会话失败: ${res.status}`);
+}
+
 export async function fetchHistory(sessionId: string): Promise<ChatItem[]> {
 	const res = await fetch(`/api/sessions/${sessionId}/history`);
 	if (!res.ok) throw new Error(`获取历史失败: ${res.status}`);

@@ -1,8 +1,8 @@
 /**
- * 顶栏：标题、模型名、新对话按钮、主题切换
+ * 顶栏：标题、模型名、主题切换
  */
 
-import { Monitor, Moon, Plus, Sun } from "lucide-react";
+import { Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchInfo } from "@/api";
 import { useTheme } from "@/components/theme-provider";
@@ -15,13 +15,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export function Header({
-	sessionId,
-	onNewChat,
-}: {
-	sessionId?: string;
-	onNewChat: () => void;
-}) {
+export function Header({ sessionId }: { sessionId?: string }) {
 	const { theme, setTheme } = useTheme();
 	const [model, setModel] = useState<string>();
 
@@ -38,10 +32,6 @@ export function Header({
 			{model && <Badge variant="secondary">{model}</Badge>}
 
 			<div className="ml-auto flex items-center gap-1">
-				<Button variant="ghost" size="icon" onClick={onNewChat} title="新对话">
-					<Plus className="size-4" />
-				</Button>
-
 				<DropdownMenu>
 					<DropdownMenuTrigger
 						render={<Button variant="ghost" size="icon" title="主题" />}

@@ -17,14 +17,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	createSession,
+	deleteSession,
 	fetchHistory,
+	listSessions,
 	openEventsChannel,
 	streamChat,
 } from "@/api";
-import type { ChatItem } from "@/types";
+import type { ChatItem, SessionSummary } from "@/types";
 import { ChatInput } from "./ChatInput";
 import { Header } from "./Header";
 import { MessageList } from "./MessageList";
+import { SessionList } from "./SessionList";
 
 let idCounter = 0;
 const nextId = () => `live-${idCounter++}`;
@@ -33,6 +36,7 @@ const LAST_SESSION_KEY = "qnxg:last-session";
 
 export function ChatPage() {
 	const [sessionId, setSessionId] = useState<string>();
+	const [sessions, setSessions] = useState<SessionSummary[]>([]);
 	const [items, setItems] = useState<ChatItem[]>([]);
 	const [running, setRunning] = useState(false);
 	/** 写者锁：多标签页打开同一会话时，只有写者能发消息（由 events 通道 role 事件驱动） */
@@ -41,16 +45,30 @@ export function ChatPage() {
 	const writerRef = useRef(false);
 	writerRef.current = writer;
 
+	const refreshSessions = useCallback(async () => {
+		try {
+			setSessions(await listSessions());
+		} catch {
+			// 列表刷新失败不影响对话
+		}
+	}, []);
+
+	/** 切换到指定会话并加载历史 */
+	const selectSession = useCallback(async (id: string) => {
+		const history = await fetchHistory(id);
+		idCounter = history.length;
+		setItems(history);
+		localStorage.setItem(LAST_SESSION_KEY, id);
+		setSessionId(id);
+	}, []);
+
 	// 启动：恢复上次会话，失败则新建
 	useEffect(() => {
 		(async () => {
 			const saved = localStorage.getItem(LAST_SESSION_KEY);
 			if (saved) {
 				try {
-					const history = await fetchHistory(saved);
-					idCounter = history.length;
-					setItems(history);
-					setSessionId(saved);
+					await selectSession(saved);
 					return;
 				} catch {
 					localStorage.removeItem(LAST_SESSION_KEY);
@@ -60,7 +78,8 @@ export function ChatPage() {
 			localStorage.setItem(LAST_SESSION_KEY, id);
 			setSessionId(id);
 		})().catch(() => {});
-	}, []);
+		refreshSessions();
+	}, [selectSession, refreshSessions]);
 
 	// 会话切换：打开 events 通道（卸载/切换时自动关闭）
 	useEffect(() => {
@@ -157,7 +176,11 @@ export function ChatPage() {
 								block.status = isError ? "error" : "done";
 							}
 						}),
-					onDone: finish,
+					onDone: () => {
+						finish();
+						// 首条消息会成为会话标题，跑完刷新侧边栏
+						refreshSessions();
+					},
 					onError: (message) => {
 						patchLastAssistant((msg) => {
 							msg.blocks.push({ type: "text", text: `⚠️ ${message}` });
@@ -169,7 +192,7 @@ export function ChatPage() {
 				finish();
 			}
 		},
-		[patchLastAssistant, sessionId],
+		[patchLastAssistant, sessionId, refreshSessions],
 	);
 
 	const newChat = useCallback(async () => {
@@ -179,23 +202,66 @@ export function ChatPage() {
 			localStorage.setItem(LAST_SESSION_KEY, id);
 			setItems([]);
 			setSessionId(id);
+			refreshSessions();
 		} catch {
 			// 创建失败保持现状
 		}
-	}, []);
+	}, [refreshSessions]);
+
+	/** 侧边栏切换会话（运行中禁止切换，避免事件串台） */
+	const switchSession = useCallback(
+		(id: string) => {
+			if (runningRef.current || id === sessionId) return;
+			selectSession(id).catch(() => {});
+		},
+		[selectSession, sessionId],
+	);
+
+	const removeSession = useCallback(
+		async (id: string) => {
+			try {
+				await deleteSession(id);
+			} catch {
+				return;
+			}
+			if (id !== sessionId) {
+				refreshSessions();
+				return;
+			}
+			// 删掉的是当前会话：切到列表里下一个，没有就新建
+			const remaining = sessions.filter((s) => s.id !== id);
+			if (remaining.length > 0) {
+				selectSession(remaining[0].id).catch(() => {});
+			} else {
+				newChat();
+				return;
+			}
+			refreshSessions();
+		},
+		[sessionId, sessions, selectSession, newChat, refreshSessions],
+	);
 
 	return (
-		<div className="flex h-svh flex-col">
-			<Header sessionId={sessionId} onNewChat={newChat} />
-			<div className="flex-1 overflow-y-auto">
-				<MessageList items={items} running={running} />
-			</div>
-			{sessionId && !writer && (
-				<div className="border-t bg-muted/50 px-4 py-1.5 text-center text-xs text-muted-foreground">
-					另一个页面正在使用此会话，当前页面为只读
+		<div className="flex h-svh">
+			<SessionList
+				sessions={sessions}
+				currentId={sessionId}
+				onSelect={switchSession}
+				onNew={newChat}
+				onDelete={removeSession}
+			/>
+			<div className="flex min-w-0 flex-1 flex-col">
+				<Header sessionId={sessionId} />
+				<div className="flex-1 overflow-y-auto">
+					<MessageList items={items} running={running} />
 				</div>
-			)}
-			<ChatInput disabled={running || !sessionId || !writer} onSend={send} />
+				{sessionId && !writer && (
+					<div className="border-t bg-muted/50 px-4 py-1.5 text-center text-xs text-muted-foreground">
+						另一个页面正在使用此会话，当前页面为只读
+					</div>
+				)}
+				<ChatInput disabled={running || !sessionId || !writer} onSend={send} />
+			</div>
 		</div>
 	);
 }
