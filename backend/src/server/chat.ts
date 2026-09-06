@@ -1,5 +1,5 @@
 /**
- * 对话接口：POST /api/chat
+ * 对话接口：POST /api/sessions/:id/chat
  *
  * body: { message: string }
  * 响应是 SSE 流，订阅 session 事件并转发给浏览器：
@@ -10,27 +10,34 @@
  * - done        本轮结束
  * - error       出错
  *
- * 通过 PromptQueue 串行化：请求先排队，排到时才订阅事件，
+ * 每个会话有自己的 PromptQueue 串行化：请求先排队，排到时才订阅事件，
  * 保证这个连接只收到自己这轮 prompt 的事件，不会和前面排队的串台。
  */
 
-import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import type { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { formatToolIO } from "../agent/session.js";
-import type { PromptQueue } from "./prompt-queue.js";
+import type { SessionPool } from "./session-pool.js";
 
-export function registerChatRoute(
-	app: Hono,
-	session: AgentSession,
-	queue: PromptQueue,
-) {
-	app.post("/api/chat", async (c) => {
-		const body = await c.req.json<{ message?: string }>().catch(() => null);
+export function registerChatRoute(app: Hono, pool: SessionPool) {
+	app.post("/api/sessions/:id/chat", async (c) => {
+		const pooled = await pool.acquire(c.req.param("id"));
+		if (!pooled) return c.json({ error: "会话不存在" }, 404);
+
+		const body = await c.req
+			.json<{ message?: string; clientId?: string }>()
+			.catch(() => null);
 		const message = body?.message?.trim();
 		if (!message) {
 			return c.json({ error: "message 不能为空" }, 400);
 		}
+
+		// 写者锁：多标签页打开同一会话时，只有队首标签页能发消息
+		if (!body?.clientId || !pool.isWriter(pooled.id, body.clientId)) {
+			return c.json({ error: "另一个页面正在使用此会话，无发送权限" }, 409);
+		}
+
+		const { session, queue } = pooled;
 
 		return streamSSE(c, async (stream) => {
 			// 客户端断连后 writeSSE 会抛错（在 subscribe 回调里会变成 unhandled
@@ -92,6 +99,8 @@ export function registerChatRoute(
 					});
 				} finally {
 					unsubscribe();
+					// 跑完刷新活跃时间，避免无连接时被 sweeper 立刻淘汰
+					pool.touch(pooled.id);
 				}
 			});
 		});

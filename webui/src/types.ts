@@ -17,5 +17,29 @@ export type Block =
 
 /** 对话里的一条消息 */
 export type ChatItem =
-	| { kind: "user"; id: string; text: string; timestamp: number }
-	| { kind: "assistant"; id: string; blocks: Block[]; timestamp: number };
+	| {
+			kind: "user";
+			id: string;
+			/** 会话树中的 entryId（实时流里新消息暂时没有），编辑/分支定位用 */
+			entryId?: string;
+			text: string;
+			timestamp: number;
+	  }
+	| {
+			kind: "assistant";
+			id: string;
+			entryId?: string;
+			blocks: Block[];
+			timestamp: number;
+	  };
+
+/** 会话列表项（GET /api/sessions） */
+export interface SessionSummary {
+	id: string;
+	name?: string;
+	firstMessage: string;
+	messageCount: number;
+	created: string;
+	modified: string;
+	resident: boolean;
+}

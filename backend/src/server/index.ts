@@ -1,12 +1,14 @@
 /**
  * Web UI 后端入口
  *
- * 启动时创建 agent session（与 CLI 模式共用 createAgent），
+ * 多会话架构：SessionPool 管理所有 AgentSession（持久化在 sessions/ 目录），
  * 暴露 HTTP API 给前端：
- * - POST   /api/chat     发消息，SSE 流式返回
- * - GET    /api/history  对话历史（页面刷新恢复）
- * - DELETE /api/history  清空对话
- * - GET    /api/info     模型等元信息
+ * - GET  /api/sessions               会话列表
+ * - POST /api/sessions               新建会话
+ * - GET  /api/sessions/:id/info      会话元信息（模型等）
+ * - GET  /api/sessions/:id/history   对话历史（页面刷新恢复）
+ * - POST /api/sessions/:id/chat      发消息，SSE 流式返回
+ * - GET  /api/sessions/:id/events    会话事件通道（长驻 SSE，兼作会话池保鲜信号）
  *
  * 开发时 vite proxy 把 /api 转发到这里；
  * 生产时通过 workspace 依赖定位 webui 构建产物，同一进程 serve 前端静态文件。
@@ -22,15 +24,17 @@ import path from "node:path";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
-import { createAgent } from "../agent/session.js";
 import { registerChatRoute } from "./chat.js";
+import { registerEventsRoute } from "./events.js";
 import { registerHistoryRoutes } from "./history.js";
-import { PromptQueue } from "./prompt-queue.js";
+import { SessionPool } from "./session-pool.js";
 
 const PORT = Number(process.env.PORT ?? 3210);
 
-const session = await createAgent();
-const queue = new PromptQueue();
+/** 会话持久化目录（相对 backend/ 工作目录） */
+const SESSIONS_DIR = "sessions";
+
+const pool = new SessionPool(SESSIONS_DIR);
 
 // 通过 workspace 依赖（@qnxg/webui）定位前端构建产物，不依赖 CWD
 const webuiDist = path.join(
@@ -42,9 +46,22 @@ const webuiDist = path.join(
 
 const app = new Hono();
 
-app.get("/api/info", (c) => c.json({ model: session.model?.id ?? "unknown" }));
-registerChatRoute(app, session, queue);
-registerHistoryRoutes(app, session);
+app.get("/api/sessions", async (c) => c.json(await pool.list()));
+
+app.post("/api/sessions", async (c) => {
+	const pooled = await pool.create();
+	return c.json({ id: pooled.id });
+});
+
+app.get("/api/sessions/:id/info", async (c) => {
+	const pooled = await pool.acquire(c.req.param("id"));
+	if (!pooled) return c.json({ error: "会话不存在" }, 404);
+	return c.json({ model: pooled.session.model?.id ?? "unknown" });
+});
+
+registerChatRoute(app, pool);
+registerHistoryRoutes(app, pool);
+registerEventsRoute(app, pool);
 
 // 生产模式：serve 前端构建产物 + SPA fallback（dev 模式由 vite proxy 接管）
 if (existsSync(path.join(webuiDist, "index.html"))) {

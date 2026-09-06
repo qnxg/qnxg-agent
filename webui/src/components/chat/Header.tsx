@@ -15,15 +15,22 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export function Header({ onNewChat }: { onNewChat: () => void }) {
+export function Header({
+	sessionId,
+	onNewChat,
+}: {
+	sessionId?: string;
+	onNewChat: () => void;
+}) {
 	const { theme, setTheme } = useTheme();
 	const [model, setModel] = useState<string>();
 
 	useEffect(() => {
-		fetchInfo()
+		if (!sessionId) return;
+		fetchInfo(sessionId)
 			.then((info) => setModel(info.model))
 			.catch(() => {});
-	}, []);
+	}, [sessionId]);
 
 	return (
 		<header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur">
