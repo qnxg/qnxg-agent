@@ -71,17 +71,11 @@ export interface ChatStreamHandlers {
 	onError: (message: string) => void;
 }
 
-/** 发消息并消费 SSE 流，事件通过 handlers 回调 */
-export async function streamChat(
-	sessionId: string,
-	message: string,
+/** 消费 SSE 流（chat / edit 共用），事件通过 handlers 回调 */
+async function consumeSSE(
+	res: Response,
 	handlers: ChatStreamHandlers,
 ): Promise<void> {
-	const res = await fetch(`/api/sessions/${sessionId}/chat`, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ message, clientId: getClientId() }),
-	});
 	if (!res.ok || !res.body) {
 		const err = await res.json().catch(() => null);
 		handlers.onError(err?.error ?? `请求失败: ${res.status}`);
@@ -135,4 +129,42 @@ export async function streamChat(
 		}
 	}
 	handlers.onDone(); // 流兜底结束（done 事件重复调用是幂等的）
+}
+
+/** 发消息并消费 SSE 流 */
+export async function streamChat(
+	sessionId: string,
+	message: string,
+	handlers: ChatStreamHandlers,
+): Promise<void> {
+	const res = await fetch(`/api/sessions/${sessionId}/chat`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ message, clientId: getClientId() }),
+	});
+	await consumeSSE(res, handlers);
+}
+
+/** 编辑最后一条用户消息并重发（entryId 定位），消费 SSE 流 */
+export async function streamEdit(
+	sessionId: string,
+	entryId: string,
+	message: string,
+	handlers: ChatStreamHandlers,
+): Promise<void> {
+	const res = await fetch(`/api/sessions/${sessionId}/edit`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ entryId, message, clientId: getClientId() }),
+	});
+	await consumeSSE(res, handlers);
+}
+
+/** 中断当前回复（不在跑时是 no-op） */
+export async function abortChat(sessionId: string): Promise<void> {
+	await fetch(`/api/sessions/${sessionId}/abort`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ clientId: getClientId() }),
+	});
 }

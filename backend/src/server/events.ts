@@ -28,7 +28,7 @@ export function registerEventsRoute(app: Hono, pool: SessionPool) {
 		const pooled = await pool.acquire(id);
 		if (!pooled) return c.json({ error: "会话不存在" }, 404);
 
-		pool.connect(id, clientId);
+		const conn = pool.connect(id, clientId);
 
 		return streamSSE(c, async (stream) => {
 			let aborted = false;
@@ -52,7 +52,9 @@ export function registerEventsRoute(app: Hono, pool: SessionPool) {
 				if (aborted) return;
 				aborted = true;
 				offWriterChange();
-				pool.disconnect(id, clientId);
+				// 传连接句柄而不是 clientId：旧连接的延迟 cleanup 不会误伤
+				// 同 clientId 重连的新连接
+				pool.disconnect(id, conn);
 			};
 			stream.onAbort(cleanup);
 

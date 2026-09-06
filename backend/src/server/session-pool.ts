@@ -33,7 +33,7 @@ const SWEEP_INTERVAL_MS = 15_000;
 const WRITER_GRACE_MS = 3_000;
 
 /** 一个标签页到会话的 events 通道连接 */
-interface Connection {
+export interface Connection {
 	clientId: string;
 	/** 连接顺序号，队首即写者 */
 	seq: number;
@@ -135,34 +135,46 @@ export class SessionPool {
 		return this.getWriter(id) === clientId;
 	}
 
-	/** events 通道建立：登记连接（宽限期内同 clientId 重连则原位复活） */
-	connect(id: string, clientId: string): void {
+	/**
+	 * events 通道建立：登记连接，返回连接句柄（断开时必须传回句柄，
+	 * 防止旧连接的延迟 cleanup 误伤同 clientId 的新连接）。
+	 * 同 clientId 重连原位复活，保住写者位置。
+	 */
+	connect(id: string, clientId: string): Connection | null {
 		const p = this.sessions.get(id);
-		if (!p) return;
+		if (!p) return null;
 		p.lastActiveAt = Date.now();
 
-		const existing = p.connections.find(
-			(c) => c.clientId === clientId && !c.connected,
-		);
+		const existing = p.connections.find((c) => c.clientId === clientId);
 		if (existing) {
+			// EventSource 网络抖动后会立刻重连，服务端可能还没发现旧连接断开
+			// （旧的还是 connected: true）。旧连接已不可用，直接原位复活，
+			// 否则同 clientId 会被排到队尾，等旧连接宽限期结束就丢了写者锁。
 			clearTimeout(existing.removeTimer);
 			existing.connected = true;
-			return;
+			// 同 clientId 的重复残留（极端情况）清掉
+			p.connections = p.connections.filter(
+				(c) => c === existing || c.clientId !== clientId,
+			);
+			return existing;
 		}
-		p.connections.push({ clientId, seq: this.nextSeq++, connected: true });
+		const conn: Connection = {
+			clientId,
+			seq: this.nextSeq++,
+			connected: true,
+		};
+		p.connections.push(conn);
 		this.emitWriterChange(p);
+		return conn;
 	}
 
 	/** events 通道断开：宽限期后移除，若让出写者则通知 */
-	disconnect(id: string, clientId: string): void {
+	disconnect(id: string, conn: Connection | null): void {
 		const p = this.sessions.get(id);
-		if (!p) return;
+		if (!p || !conn || !conn.connected) return;
+		if (!p.connections.includes(conn)) return;
 		p.lastActiveAt = Date.now();
 
-		const conn = p.connections.find(
-			(c) => c.clientId === clientId && c.connected,
-		);
-		if (!conn) return;
 		conn.connected = false;
 		conn.removeTimer = setTimeout(() => {
 			p.connections = p.connections.filter((c) => c !== conn);
@@ -198,7 +210,7 @@ export class SessionPool {
 		if (p) p.lastActiveAt = Date.now();
 	}
 
-	/** 删除会话：池内 dispose + 删磁盘 JSONL。不存在返回 false */
+	/** 删除会话：运行中先中断，池内 dispose + 删磁盘 JSONL。不存在返回 false */
 	async remove(id: string): Promise<boolean> {
 		const p = this.sessions.get(id);
 		let filePath = p?.session.sessionFile;
@@ -210,23 +222,28 @@ export class SessionPool {
 		if (!filePath) {
 			// 池内未落盘的空会话：直接从池里删掉即可
 			if (p) {
-				this.evictNow(p);
+				await this.evictNow(p);
 				return true;
 			}
 			return false;
 		}
 
-		if (p) this.evictNow(p);
+		if (p) await this.evictNow(p);
 		const { unlink } = await import("node:fs/promises");
 		await unlink(filePath).catch(() => {});
 		return true;
 	}
 
-	/** 立即移出池子（dispose + 清连接计时器） */
-	private evictNow(p: PooledSession): void {
+	/** 立即移出池子（中断在跑的 prompt + dispose + 清连接计时器 + 通知写者失效） */
+	private async evictNow(p: PooledSession): Promise<void> {
+		if (p.session.isStreaming) {
+			await p.session.abort().catch(() => {});
+		}
 		for (const c of p.connections) clearTimeout(c.removeTimer);
+		p.connections = [];
 		p.session.dispose();
 		this.sessions.delete(p.id);
+		this.emitWriterChange(p); // writer 变为 null，通知还连着的标签页
 	}
 
 	/** 磁盘上的会话列表 + 池内尚未落盘的（新建还没说过话的），按修改时间倒序 */
@@ -265,7 +282,7 @@ export class SessionPool {
 			if (p.connections.some((c) => c.connected)) continue;
 			if (p.session.isStreaming) continue;
 			if (now - p.lastActiveAt < EVICT_TTL_MS) continue;
-			this.evictNow(p);
+			void this.evictNow(p);
 		}
 	}
 }

@@ -9,6 +9,8 @@
  * - GET  /api/sessions/:id/info      会话元信息（模型等）
  * - GET  /api/sessions/:id/history   对话历史（页面刷新恢复）
  * - POST /api/sessions/:id/chat      发消息，SSE 流式返回
+ * - POST /api/sessions/:id/abort     中断当前回复
+ * - POST /api/sessions/:id/edit      编辑最后一条用户消息并重发（SSE）
  * - GET  /api/sessions/:id/events    会话事件通道（长驻 SSE，兼作会话池保鲜信号）
  *
  * 开发时 vite proxy 把 /api 转发到这里；

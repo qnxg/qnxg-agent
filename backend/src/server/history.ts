@@ -115,6 +115,17 @@ function buildChatItems(session: AgentSession): ChatItem[] {
 		}
 	}
 
+	// abort/进程中断后没有 toolResult 的工具块会永远停在 running，统一收尾为 error
+	for (const item of items) {
+		if (item.kind !== "assistant") continue;
+		for (const block of item.blocks) {
+			if (block.type === "tool" && block.status === "running") {
+				block.status = "error";
+				block.result = block.result || "（已中断）";
+			}
+		}
+	}
+
 	return items;
 }
 
