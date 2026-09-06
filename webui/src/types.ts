@@ -43,3 +43,24 @@ export interface SessionSummary {
 	modified: string;
 	resident: boolean;
 }
+
+/** 会话用量（GET /api/sessions/:id/stats） */
+export interface SessionStats {
+	/** 累计 token（含被压缩/编辑掉的历史，反映实际计费） */
+	tokens: {
+		input: number;
+		output: number;
+		cacheRead: number;
+		cacheWrite: number;
+		total: number;
+	};
+	/** 累计费用（美元） */
+	cost: number;
+	messages: { user: number; assistant: number };
+	/** 当前上下文占用；刚压缩完未知时为 null */
+	context: {
+		tokens: number | null;
+		contextWindow: number;
+		percent: number | null;
+	} | null;
+}

@@ -7,7 +7,7 @@
  *   这里用 fetch 的 ReadableStream 手动解析 SSE 协议（event:/data: 行）
  * - 会话事件通道走原生 EventSource（GET，自动重连）
  */
-import type { ChatItem, SessionSummary } from "./types";
+import type { ChatItem, SessionStats, SessionSummary } from "./types";
 
 /**
  * 标签页级 clientId（sessionStorage：同标签页刷新保持不变，不同标签页各自唯一）。
@@ -48,6 +48,12 @@ export async function fetchHistory(sessionId: string): Promise<ChatItem[]> {
 export async function fetchInfo(sessionId: string): Promise<{ model: string }> {
 	const res = await fetch(`/api/sessions/${sessionId}/info`);
 	if (!res.ok) throw new Error(`获取信息失败: ${res.status}`);
+	return res.json();
+}
+
+export async function fetchStats(sessionId: string): Promise<SessionStats> {
+	const res = await fetch(`/api/sessions/${sessionId}/stats`);
+	if (!res.ok) throw new Error(`获取用量失败: ${res.status}`);
 	return res.json();
 }
 

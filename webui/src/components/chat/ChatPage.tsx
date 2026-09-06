@@ -22,12 +22,13 @@ import {
 	createSession,
 	deleteSession,
 	fetchHistory,
+	fetchStats,
 	listSessions,
 	openEventsChannel,
 	streamChat,
 	streamEdit,
 } from "@/api";
-import type { ChatItem, SessionSummary } from "@/types";
+import type { ChatItem, SessionStats, SessionSummary } from "@/types";
 import { ChatInput } from "./ChatInput";
 import { Header } from "./Header";
 import { MessageList } from "./MessageList";
@@ -42,6 +43,7 @@ export function ChatPage() {
 	const [sessionId, setSessionId] = useState<string>();
 	const [sessions, setSessions] = useState<SessionSummary[]>([]);
 	const [items, setItems] = useState<ChatItem[]>([]);
+	const [stats, setStats] = useState<SessionStats>();
 	const [running, setRunning] = useState(false);
 	/** 写者锁：多标签页打开同一会话时，只有写者能发消息（由 events 通道 role 事件驱动） */
 	const [writer, setWriter] = useState(false);
@@ -59,6 +61,9 @@ export function ChatPage() {
 	const selectSession = useCallback(async (id: string) => {
 		const history = await fetchHistory(id);
 		setItems(history);
+		fetchStats(id)
+			.then(setStats)
+			.catch(() => setStats(undefined));
 		localStorage.setItem(LAST_SESSION_KEY, id);
 		setSessionId(id);
 	}, []);
@@ -127,6 +132,9 @@ export function ChatPage() {
 			if (refetchHistory && sessionId) {
 				fetchHistory(sessionId)
 					.then((history) => setItems(history))
+					.catch(() => {});
+				fetchStats(sessionId)
+					.then(setStats)
 					.catch(() => {});
 			}
 		};
@@ -254,6 +262,7 @@ export function ChatPage() {
 			const { id } = await createSession();
 			localStorage.setItem(LAST_SESSION_KEY, id);
 			setItems([]);
+			setStats(undefined);
 			setSessionId(id);
 			refreshSessions();
 		} catch {
@@ -312,7 +321,7 @@ export function ChatPage() {
 				onDelete={removeSession}
 			/>
 			<div className="flex min-w-0 flex-1 flex-col">
-				<Header sessionId={sessionId} />
+				<Header sessionId={sessionId} stats={stats} />
 				<div className="flex-1 overflow-y-auto">
 					<MessageList
 						items={items}

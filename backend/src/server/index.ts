@@ -11,6 +11,7 @@
  * - POST /api/sessions/:id/chat      发消息，SSE 流式返回
  * - POST /api/sessions/:id/abort     中断当前回复
  * - POST /api/sessions/:id/edit      编辑最后一条用户消息并重发（SSE）
+ * - GET  /api/sessions/:id/stats     token 用量与上下文占用
  * - GET  /api/sessions/:id/events    会话事件通道（长驻 SSE，兼作会话池保鲜信号）
  *
  * 开发时 vite proxy 把 /api 转发到这里；
@@ -31,6 +32,7 @@ import { registerChatRoute } from "./chat.js";
 import { registerEventsRoute } from "./events.js";
 import { registerHistoryRoutes } from "./history.js";
 import { SessionPool } from "./session-pool.js";
+import { registerStatsRoute } from "./stats.js";
 
 const PORT = Number(process.env.PORT ?? 3210);
 
@@ -71,6 +73,7 @@ app.get("/api/sessions/:id/info", async (c) => {
 registerChatRoute(app, pool);
 registerHistoryRoutes(app, pool);
 registerEventsRoute(app, pool);
+registerStatsRoute(app, pool);
 
 // 生产模式：serve 前端构建产物 + SPA fallback（dev 模式由 vite proxy 接管）
 if (existsSync(path.join(webuiDist, "index.html"))) {
