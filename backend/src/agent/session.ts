@@ -48,6 +48,7 @@ export function formatToolIO(value: unknown): string {
 
 export async function createAgent(
 	extraTools: ReturnType<typeof defineTool>[] = [],
+	sessionManager?: SessionManager,
 ): Promise<AgentSession> {
 	// 模型配置全部来自项目内 pi-config/ 目录，不依赖 ~/.pi/agent
 	// - models.json: deepseek provider + 模型定义，apiKey 通过 $DEEPSEEK_API_KEY 引用 .env
@@ -74,7 +75,9 @@ export async function createAgent(
 	await loader.reload();
 
 	const { session } = await createAgentSession({
-		sessionManager: SessionManager.inMemory(),
+		// web 模式由调用方传入持久化的 SessionManager（JSONL 落盘）；
+		// CLI 模式不传，保持内存会话
+		sessionManager: sessionManager ?? SessionManager.inMemory(),
 		modelRuntime,
 		settingsManager,
 		resourceLoader: loader,

@@ -1,18 +1,21 @@
 /**
- * 对话历史接口：GET /api/history、DELETE /api/history
+ * 对话历史接口：GET /api/sessions/:id/history
  *
- * 把 pi session 的原始 messages（user / assistant / toolResult 三种角色交织）
- * 转成前端直接渲染的 ChatItem[]：
+ * 数据源是 sessionManager.buildContextEntries()（当前分支路径上的会话树 entry），
+ * 而不是 state.messages —— 前者带 entryId，编辑重发 / fork 分支要靠它定位，
+ * 且天然处理压缩后的上下文视图。
+ *
+ * pi 的原始 message（user / assistant / toolResult 三种角色交织）被转成
+ * 前端直接渲染的 ChatItem[]：
  * - user 消息直接映射
  * - assistant 消息的 content 拆成 text / tool 块，
  *   toolResult 按 toolCallId 回填到对应 tool 块里
  * - thinking 块跳过（不在 UI 展示）
- *
- * 页面刷新时前端拉这个接口恢复对话（server 不重启，内存里的对话就还在）。
  */
 
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import type { Hono } from "hono";
+import type { SessionPool } from "./session-pool.js";
 import type { Block, ChatItem } from "./types.js";
 
 /* pi-ai 的消息结构（未从 sdk 顶层导出，这里按契约定义最小子集） */
@@ -44,20 +47,29 @@ function extractText(content: unknown): string {
 }
 
 function buildChatItems(session: AgentSession): ChatItem[] {
-	const messages = session.state.messages as unknown as RawMessage[];
+	const entries = session.sessionManager.buildContextEntries();
 	const items: ChatItem[] = [];
 
 	/** toolCallId -> 所在 tool 块，用于回填 toolResult */
 	const toolBlocks = new Map<string, Extract<Block, { type: "tool" }>>();
 
-	messages.forEach((msg, i) => {
+	for (const entry of entries) {
+		if (entry.type !== "message") continue;
+		const msg = entry.message as unknown as RawMessage;
+
 		if (msg.role === "user") {
 			const text =
 				typeof msg.content === "string"
 					? msg.content
 					: extractText(msg.content);
-			items.push({ kind: "user", id: `m${i}`, text, timestamp: msg.timestamp });
-			return;
+			items.push({
+				kind: "user",
+				id: entry.id,
+				entryId: entry.id,
+				text,
+				timestamp: msg.timestamp,
+			});
+			continue;
 		}
 
 		if (msg.role === "assistant") {
@@ -84,12 +96,13 @@ function buildChatItems(session: AgentSession): ChatItem[] {
 			if (blocks.length > 0) {
 				items.push({
 					kind: "assistant",
-					id: `m${i}`,
+					id: entry.id,
+					entryId: entry.id,
 					blocks,
 					timestamp: msg.timestamp,
 				});
 			}
-			return;
+			continue;
 		}
 
 		if (msg.role === "toolResult" && msg.toolCallId) {
@@ -100,17 +113,26 @@ function buildChatItems(session: AgentSession): ChatItem[] {
 				block.status = msg.isError ? "error" : "done";
 			}
 		}
-	});
+	}
+
+	// abort/进程中断后没有 toolResult 的工具块会永远停在 running，统一收尾为 error
+	for (const item of items) {
+		if (item.kind !== "assistant") continue;
+		for (const block of item.blocks) {
+			if (block.type === "tool" && block.status === "running") {
+				block.status = "error";
+				block.result = block.result || "（已中断）";
+			}
+		}
+	}
 
 	return items;
 }
 
-export function registerHistoryRoutes(app: Hono, session: AgentSession) {
-	app.get("/api/history", (c) => c.json(buildChatItems(session)));
-
-	// 清空对话（新对话按钮）。与 analyzer.ts 清空上下文的做法一致
-	app.delete("/api/history", (c) => {
-		session.agent.state.messages = [];
-		return c.json({ ok: true });
+export function registerHistoryRoutes(app: Hono, pool: SessionPool) {
+	app.get("/api/sessions/:id/history", async (c) => {
+		const pooled = await pool.acquire(c.req.param("id"));
+		if (!pooled) return c.json({ error: "会话不存在" }, 404);
+		return c.json(buildChatItems(pooled.session));
 	});
 }

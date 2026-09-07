@@ -4,7 +4,7 @@
  * 前端渲染用的消息结构与 pi 原始 messages 解耦：
  * 一条助手消息内部是 block 数组（text / tool 交替），
  * SSE 实时流和 /api/history 历史接口共用这一套结构。
- * （web/src/types.ts 里有一份对应的前端副本，改动时要同步）
+ * （webui/src/types.ts 里有一份对应的前端副本，改动时要同步）
  */
 
 /** 助手消息里的内容块 */
@@ -24,5 +24,18 @@ export type Block =
 
 /** 对话里的一条消息 */
 export type ChatItem =
-	| { kind: "user"; id: string; text: string; timestamp: number }
-	| { kind: "assistant"; id: string; blocks: Block[]; timestamp: number };
+	| {
+			kind: "user";
+			id: string;
+			/** 会话树中的 entryId（实时流里新消息暂时没有），编辑/分支定位用 */
+			entryId?: string;
+			text: string;
+			timestamp: number;
+	  }
+	| {
+			kind: "assistant";
+			id: string;
+			entryId?: string;
+			blocks: Block[];
+			timestamp: number;
+	  };

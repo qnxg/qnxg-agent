@@ -21,7 +21,10 @@ export function getGreptimeConfig() {
 	return { url, auth };
 }
 
-export async function greptimeQuery(sql: string): Promise<string> {
+export async function greptimeQuery(
+	sql: string,
+	signal?: AbortSignal,
+): Promise<string> {
 	const { url, auth } = getGreptimeConfig();
 	const body = `sql=${encodeURIComponent(sql)}`;
 	const res = await fetch(url, {
@@ -31,6 +34,7 @@ export async function greptimeQuery(sql: string): Promise<string> {
 			"Content-Type": "application/x-www-form-urlencoded",
 		},
 		body,
+		signal,
 	});
 	if (!res.ok) {
 		const text = await res.text().catch(() => "");
