@@ -21,17 +21,31 @@ export function getGreptimeConfig() {
 	return { url, auth };
 }
 
+/** 单次查询的超时时间（毫秒） */
+const QUERY_TIMEOUT_MS = 30_000;
+
 export async function greptimeQuery(sql: string): Promise<string> {
 	const { url, auth } = getGreptimeConfig();
 	const body = `sql=${encodeURIComponent(sql)}`;
-	const res = await fetch(url, {
-		method: "POST",
-		headers: {
-			Authorization: auth,
-			"Content-Type": "application/x-www-form-urlencoded",
-		},
-		body,
-	});
+	let res: Response;
+	try {
+		res = await fetch(url, {
+			method: "POST",
+			headers: {
+				Authorization: auth,
+				"Content-Type": "application/x-www-form-urlencoded",
+			},
+			body,
+			signal: AbortSignal.timeout(QUERY_TIMEOUT_MS),
+		});
+	} catch (err) {
+		if (err instanceof DOMException && err.name === "TimeoutError") {
+			throw new Error(
+				`GreptimeDB 查询超时（超过 ${QUERY_TIMEOUT_MS / 1000} 秒）`,
+			);
+		}
+		throw err;
+	}
 	if (!res.ok) {
 		const text = await res.text().catch(() => "");
 		throw new Error(`GreptimeDB 请求失败 (${res.status}): ${text}`);
