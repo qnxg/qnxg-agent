@@ -16,6 +16,7 @@
 		"@qnxg/webui": "workspace:*",
 		"amqplib": "^2.0.1",
 		"hono": "^4.13.5",
+		"node-sql-parser": "^5.4.0",
 		"quickjs-emscripten": "^0.32.0",
 		"typebox": "^1.1.38"
 	},
